@@ -12,11 +12,13 @@ pub struct LoginSettings {
     pub remember_password: bool,
 }
 
+const FILENAME: &str = "client/login_settings.ron";
+
 impl LoginSettings {
     pub fn new() -> Self {
         Self::load().unwrap_or_else(|| {
             #[cfg(feature = "debug")]
-            print_debug!("failed to load login settings from {}filename{}", MAGENTA, NONE);
+            print_debug!("failed to load login settings from {}{FILENAME}{}", MAGENTA, NONE);
 
             Default::default()
         })
@@ -24,19 +26,17 @@ impl LoginSettings {
 
     pub fn load() -> Option<Self> {
         #[cfg(feature = "debug")]
-        print_debug!("loading login settings from {}filename{}", MAGENTA, NONE);
+        print_debug!("loading login settings from {}{FILENAME}{}", MAGENTA, NONE);
 
-        std::fs::read_to_string("client/login_settings.ron")
-            .ok()
-            .and_then(|data| ron::from_str(&data).ok())
+        std::fs::read_to_string(FILENAME).ok().and_then(|data| ron::from_str(&data).ok())
     }
 
     pub fn save(&self) {
         #[cfg(feature = "debug")]
-        print_debug!("saving login settings to {}filename{}", MAGENTA, NONE);
+        print_debug!("saving login settings to {}{FILENAME}{}", MAGENTA, NONE);
 
         let data = ron::ser::to_string_pretty(self, PrettyConfig::new()).unwrap();
-        std::fs::write("client/login_settings.ron", data).expect("unable to write file");
+        std::fs::write(FILENAME, data).expect("unable to write file");
     }
 }
 

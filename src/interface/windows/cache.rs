@@ -20,12 +20,14 @@ pub struct WindowCache {
     entries: HashMap<String, WindowState>,
 }
 
+const FILENAME: &str = "client/window_cache.ron";
+
 impl WindowCache {
     pub fn new() -> Self {
         Self::load().unwrap_or_else(|| {
             #[cfg(feature = "debug")]
             print_debug!(
-                "failed to load window cache from {}filename{}. creating empty cache",
+                "failed to load window cache from {}{FILENAME}{}. creating empty cache",
                 MAGENTA,
                 NONE
             );
@@ -36,9 +38,9 @@ impl WindowCache {
 
     pub fn load() -> Option<Self> {
         #[cfg(feature = "debug")]
-        print_debug!("loading window cache from {}filename{}", MAGENTA, NONE);
+        print_debug!("loading window cache from {}{FILENAME}{}", MAGENTA, NONE);
 
-        std::fs::read_to_string("client/window_cache.ron")
+        std::fs::read_to_string(FILENAME)
             .ok()
             .and_then(|data| ron::from_str(&data).ok())
             .map(|entries| Self { entries })
@@ -46,10 +48,10 @@ impl WindowCache {
 
     pub fn save(&self) {
         #[cfg(feature = "debug")]
-        print_debug!("saving window cache to {}filename{}", MAGENTA, NONE);
+        print_debug!("saving window cache to {}{FILENAME}{}", MAGENTA, NONE);
 
         let data = ron::ser::to_string_pretty(&self.entries, PrettyConfig::new()).unwrap();
-        std::fs::write("client/window_cache.ron", data).expect("unable to write file");
+        std::fs::write(FILENAME, data).expect("unable to write file");
     }
 
     pub fn register_window(&mut self, identifier: &str, position: Position, size: Size) {

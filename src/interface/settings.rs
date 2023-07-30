@@ -21,11 +21,13 @@ impl Default for InterfaceSettings {
     }
 }
 
+const FILENAME: &str = "client/interface_settings.ron";
+
 impl InterfaceSettings {
     pub fn new() -> Self {
         Self::load().unwrap_or_else(|| {
             #[cfg(feature = "debug")]
-            print_debug!("failed to load interface settings from {}filename{}", MAGENTA, NONE);
+            print_debug!("failed to load interface settings from {}{FILENAME}{}", MAGENTA, NONE);
 
             Default::default()
         })
@@ -33,19 +35,17 @@ impl InterfaceSettings {
 
     pub fn load() -> Option<Self> {
         #[cfg(feature = "debug")]
-        print_debug!("loading interface settings from {}filename{}", MAGENTA, NONE);
+        print_debug!("loading interface settings from {}{FILENAME}{}", MAGENTA, NONE);
 
-        std::fs::read_to_string("client/interface_settings.ron")
-            .ok()
-            .and_then(|data| ron::from_str(&data).ok())
+        std::fs::read_to_string(FILENAME).ok().and_then(|data| ron::from_str(&data).ok())
     }
 
     pub fn save(&self) {
         #[cfg(feature = "debug")]
-        print_debug!("saving interface settings to {}filename{}", MAGENTA, NONE);
+        print_debug!("saving interface settings to {}{FILENAME}{}", MAGENTA, NONE);
 
         let data = ron::ser::to_string_pretty(self, PrettyConfig::new()).unwrap();
-        std::fs::write("client/interface_settings.ron", data).expect("unable to write file");
+        std::fs::write(FILENAME, data).expect("unable to write file");
     }
 }
 
