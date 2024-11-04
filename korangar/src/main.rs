@@ -1163,6 +1163,21 @@ impl Client {
                         &self.script_loader,
                     );
                 }
+                NetworkEvent::ChangeHead(account_id, head_id) => {
+                    let entity = self
+                        .entities
+                        .iter_mut()
+                        .find(|entity| entity.get_entity_id().0 == account_id.0)
+                        .unwrap();
+
+                    entity.set_head(head_id as usize);
+                    entity.reload_sprite(
+                        &mut self.sprite_loader,
+                        &mut self.action_loader,
+                        &mut self.animation_loader,
+                        &self.script_loader,
+                    );
+                }
                 NetworkEvent::LoggedOut => {
                     self.networking_system.disconnect_from_map_server();
                 }

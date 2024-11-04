@@ -67,6 +67,7 @@ pub enum EntityType {
 pub struct Common {
     pub entity_id: EntityId,
     pub job_id: usize,
+    pub head_id: usize,
     pub health_points: usize,
     pub maximum_health_points: usize,
     pub movement_speed: usize,
@@ -236,7 +237,7 @@ fn get_sprite_path_for_player_job(job_id: usize) -> &'static str {
     }
 }
 
-fn get_entity_part_files(script_loader: &ScriptLoader, entity_type: EntityType, job_id: usize, sex: Sex) -> Vec<String> {
+fn get_entity_part_files(script_loader: &ScriptLoader, entity_type: EntityType, job_id: usize, sex: Sex, head_id: usize) -> Vec<String> {
     let sex_sprite_path = match sex == Sex::Female {
         true => "¿©",
         false => "³²",
@@ -256,7 +257,10 @@ fn get_entity_part_files(script_loader: &ScriptLoader, entity_type: EntityType, 
     }
 
     match entity_type {
-        EntityType::Player => vec![player_body_path(sex_sprite_path, job_id), player_head_path(sex_sprite_path, 32)],
+        EntityType::Player => vec![
+            player_body_path(sex_sprite_path, job_id),
+            player_head_path(sex_sprite_path, head_id),
+        ],
         EntityType::Npc => vec![format!("npc\\{}", script_loader.get_job_name_from_id(job_id))],
         EntityType::Monster => vec![format!("¸ó½ºÅÍ\\{}", script_loader.get_job_name_from_id(job_id))],
         EntityType::Warp | EntityType::Hidden => vec![format!("npc\\{}", script_loader.get_job_name_from_id(job_id))], // TODO: change
@@ -275,6 +279,7 @@ impl Common {
     ) -> Self {
         let entity_id = entity_data.entity_id;
         let job_id = entity_data.job as usize;
+        let head_id = entity_data.head as usize;
         let grid_position = entity_data.position;
         let grid_position = Vector2::new(grid_position.x, grid_position.y);
         let position = map.get_world_position(grid_position);
@@ -297,7 +302,7 @@ impl Common {
             _ => EntityType::Npc,
         };
 
-        let entity_part_files = get_entity_part_files(script_loader, entity_type, job_id, sex);
+        let entity_part_files = get_entity_part_files(script_loader, entity_type, job_id, sex, head_id);
         let animation_data = animation_loader
             .get(sprite_loader, action_loader, entity_type, &entity_part_files)
             .unwrap();
@@ -309,6 +314,7 @@ impl Common {
             position,
             entity_id,
             job_id,
+            head_id,
             head_direction,
             sex,
             active_movement,
@@ -337,7 +343,7 @@ impl Common {
         script_loader: &ScriptLoader,
         animation_loader: &mut AnimationLoader,
     ) {
-        let entity_part_files = get_entity_part_files(script_loader, self.entity_type, self.job_id, self.sex);
+        let entity_part_files = get_entity_part_files(script_loader, self.entity_type, self.job_id, self.sex, self.head_id);
         self.animation_data = animation_loader
             .get(sprite_loader, action_loader, self.entity_type, &entity_part_files)
             .unwrap();
@@ -1006,6 +1012,10 @@ impl Entity {
 
     pub fn set_job(&mut self, job_id: usize) {
         self.get_common_mut().job_id = job_id;
+    }
+
+    pub fn set_head(&mut self, head_id: usize) {
+        self.get_common_mut().head_id = head_id;
     }
 
     pub fn reload_sprite(

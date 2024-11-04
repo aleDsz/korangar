@@ -695,7 +695,8 @@ where
         packet_handler.register_noop::<AchievementListPacket>()?;
         packet_handler.register_noop::<CriticalWeightUpdatePacket>()?;
         packet_handler.register(|packet: SpriteChangePacket| {
-            (packet.sprite_type == 0).then_some(NetworkEvent::ChangeJob(packet.account_id, packet.value))
+            (packet.sprite_type == 0).then_some(NetworkEvent::ChangeJob(packet.account_id, packet.value));
+            (packet.sprite_type == 1).then_some(NetworkEvent::ChangeHead(packet.account_id, packet.value))
         })?;
         packet_handler.register({
             let inventory_items = inventory_items.clone();

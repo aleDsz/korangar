@@ -119,6 +119,7 @@ pub enum NetworkEvent {
         equipped_position: EquipPosition,
     },
     ChangeJob(AccountId, u32),
+    ChangeHead(AccountId, u32),
     SetPlayerPosition(WorldPosition),
     LoggedOut,
     FriendRequest {
