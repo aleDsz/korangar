@@ -1144,7 +1144,7 @@ impl Client {
                 NetworkEvent::UpdateEquippedPosition { index, equipped_position } => {
                     self.player_inventory.update_equipped_position(index, equipped_position);
                 }
-                NetworkEvent::ChangeJob(account_id, job_id) => {
+                NetworkEvent::ChangeSprite(account_id, sprite_type, value, value2) => {
                     let entity = self
                         .entities
                         .iter_mut()
@@ -1155,22 +1155,23 @@ impl Client {
                     // inventory and for unequipping items. We should probably manually
                     // request a full list of items and the hotbar.
 
-                    entity.set_job(job_id as usize);
-                    entity.reload_sprite(
-                        &mut self.sprite_loader,
-                        &mut self.action_loader,
-                        &mut self.animation_loader,
-                        &self.script_loader,
-                    );
-                }
-                NetworkEvent::ChangeHair(account_id, hair_id) => {
-                    let entity = self
-                        .entities
-                        .iter_mut()
-                        .find(|entity| entity.get_entity_id().0 == account_id.0)
-                        .unwrap();
+                    match sprite_type {
+                        ragnarok_packets::SpriteChangeType::Base => entity.set_job(value as usize),
+                        ragnarok_packets::SpriteChangeType::Hair => entity.set_hair(value as usize),
+                        ragnarok_packets::SpriteChangeType::Weapon => (),
+                        ragnarok_packets::SpriteChangeType::HeadBottom => (),
+                        ragnarok_packets::SpriteChangeType::HeadTop => (),
+                        ragnarok_packets::SpriteChangeType::HeadMiddle => (),
+                        ragnarok_packets::SpriteChangeType::HairCollor => (),
+                        ragnarok_packets::SpriteChangeType::ClothesColor => (),
+                        ragnarok_packets::SpriteChangeType::Shield => (), // FIXME: what's this?
+                        ragnarok_packets::SpriteChangeType::Shoes => (),  // FIXME: what's this?
+                        ragnarok_packets::SpriteChangeType::Body => (),
+                        ragnarok_packets::SpriteChangeType::ResetCostumes => (),
+                        ragnarok_packets::SpriteChangeType::Robe => (),
+                        ragnarok_packets::SpriteChangeType::Body2 => (), // FIXME: what's this?
+                    };
 
-                    entity.set_hair(hair_id as usize);
                     entity.reload_sprite(
                         &mut self.sprite_loader,
                         &mut self.action_loader,

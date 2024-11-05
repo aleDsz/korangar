@@ -118,8 +118,7 @@ pub enum NetworkEvent {
         index: InventoryIndex,
         equipped_position: EquipPosition,
     },
-    ChangeJob(AccountId, u32),
-    ChangeHair(AccountId, u32),
+    ChangeSprite(AccountId, SpriteChangeType, u32, u32),
     SetPlayerPosition(WorldPosition),
     LoggedOut,
     FriendRequest {
