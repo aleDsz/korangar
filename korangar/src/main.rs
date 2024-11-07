@@ -1144,40 +1144,41 @@ impl Client {
                 NetworkEvent::UpdateEquippedPosition { index, equipped_position } => {
                     self.player_inventory.update_equipped_position(index, equipped_position);
                 }
-                NetworkEvent::ChangeSprite(account_id, sprite_type, value, value2) => {
-                    let entity = self
-                        .entities
-                        .iter_mut()
-                        .find(|entity| entity.get_entity_id().0 == account_id.0)
-                        .unwrap();
+                NetworkEvent::ChangeSprite(account_id, sprite_type, value, _value2) => {
+                    let entity = self.entities.iter_mut().find(|entity| entity.get_entity_id().0 == account_id.0);
 
                     // FIX: A job change does not automatically send packets for the
                     // inventory and for unequipping items. We should probably manually
                     // request a full list of items and the hotbar.
 
-                    match sprite_type {
-                        ragnarok_packets::SpriteChangeType::Base => entity.set_job(value as usize),
-                        ragnarok_packets::SpriteChangeType::Hair => entity.set_hair(value as usize),
-                        ragnarok_packets::SpriteChangeType::Weapon => (),
-                        ragnarok_packets::SpriteChangeType::HeadBottom => (),
-                        ragnarok_packets::SpriteChangeType::HeadTop => (),
-                        ragnarok_packets::SpriteChangeType::HeadMiddle => (),
-                        ragnarok_packets::SpriteChangeType::HairCollor => (),
-                        ragnarok_packets::SpriteChangeType::ClothesColor => (),
-                        ragnarok_packets::SpriteChangeType::Shield => (), // FIXME: what's this?
-                        ragnarok_packets::SpriteChangeType::Shoes => (),  // FIXME: what's this?
-                        ragnarok_packets::SpriteChangeType::Body => (),
-                        ragnarok_packets::SpriteChangeType::ResetCostumes => (),
-                        ragnarok_packets::SpriteChangeType::Robe => (),
-                        ragnarok_packets::SpriteChangeType::Body2 => (), // FIXME: what's this?
-                    };
+                    match entity {
+                        Some(entity) => {
+                            match sprite_type {
+                                ragnarok_packets::SpriteChangeType::Base => entity.set_job(value as usize),
+                                ragnarok_packets::SpriteChangeType::Hair => entity.set_hair(value as usize),
+                                ragnarok_packets::SpriteChangeType::Weapon => entity.set_weapon(value as usize),
+                                ragnarok_packets::SpriteChangeType::HeadBottom => entity.set_head_bottom(value as usize),
+                                ragnarok_packets::SpriteChangeType::HeadTop => entity.set_head_top(value as usize),
+                                ragnarok_packets::SpriteChangeType::HeadMiddle => entity.set_head_middle(value as usize),
+                                ragnarok_packets::SpriteChangeType::HairCollor => entity.set_hair_color(value as usize),
+                                ragnarok_packets::SpriteChangeType::ClothesColor => entity.set_clothes_color(value as usize),
+                                ragnarok_packets::SpriteChangeType::Shield => (), // FIXME: what's this?
+                                ragnarok_packets::SpriteChangeType::Shoes => (),  // FIXME: what's this?
+                                ragnarok_packets::SpriteChangeType::Body => (),   // FIXME: what's this?
+                                ragnarok_packets::SpriteChangeType::ResetCostumes => (),
+                                ragnarok_packets::SpriteChangeType::Robe => entity.set_robe(value as usize),
+                                ragnarok_packets::SpriteChangeType::Body2 => (),
+                            };
 
-                    entity.reload_sprite(
-                        &mut self.sprite_loader,
-                        &mut self.action_loader,
-                        &mut self.animation_loader,
-                        &self.script_loader,
-                    );
+                            entity.reload_sprite(
+                                &mut self.sprite_loader,
+                                &mut self.action_loader,
+                                &mut self.animation_loader,
+                                &self.script_loader,
+                            );
+                        }
+                        None => (),
+                    }
                 }
                 NetworkEvent::LoggedOut => {
                     self.networking_system.disconnect_from_map_server();

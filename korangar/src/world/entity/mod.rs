@@ -3,6 +3,7 @@ use std::sync::Arc;
 
 use cgmath::{EuclideanSpace, Point3, Vector2, VectorSpace};
 use derive_new::new;
+use korangar_debug::logging::print_debug;
 use korangar_interface::elements::PrototypeElement;
 use korangar_interface::windows::{PrototypeWindow, Window};
 use korangar_networking::EntityData;
@@ -67,7 +68,14 @@ pub enum EntityType {
 pub struct Common {
     pub entity_id: EntityId,
     pub job_id: usize,
-    pub hair_id: usize,
+    pub head: usize,
+    pub weapon: usize,
+    pub head_bottom: usize,
+    pub head_top: usize,
+    pub head_middle: usize,
+    pub hair_color: usize,
+    pub clothes_color: usize,
+    pub robe: usize,
     pub health_points: usize,
     pub maximum_health_points: usize,
     pub movement_speed: usize,
@@ -96,7 +104,7 @@ fn get_sprite_path_for_player_job(job_id: usize) -> &'static str {
         3 => "±Ã¼Ö",               // ARCHER
         4 => "¼ºÁ÷ÀÚ",             // ACOLYTE
         5 => "»ÓÀÎ",               // MERCHANT
-        6 => "ΜΜΜÏ",               // THIEF
+        6 => "µµµÏ",               // THIEF
         7 => "±â»ç",               // KNIGHT
         8 => "¼ºÅõ»ç",             // PRIEST
         9 => "¸¶¹Ý»Ç",             // WIZARD
@@ -120,7 +128,7 @@ fn get_sprite_path_for_player_job(job_id: usize) -> &'static str {
         4004 => "±Ã¼Ö",            // ARCHER_H
         4005 => "¼ºÁ÷ÀÚ",          // ACOLYTE_H
         4006 => "»ÓÀÎ",            // MERCHANT_H
-        4007 => "ΜΜΜÏ",            // THIEF_H
+        4007 => "µµµÏ",            // THIEF_H
         4008 => "·Îµå³ªÀÌÆ®",      // KNIGHT_H
         4009 => "ÇÏÀÌÇÁ¸®",        // PRIEST_H
         4010 => "ÇÏÀÌÀ§Àúµå",      // WIZARD_H
@@ -237,11 +245,26 @@ fn get_sprite_path_for_player_job(job_id: usize) -> &'static str {
     }
 }
 
-fn get_entity_part_files(script_loader: &ScriptLoader, entity_type: EntityType, job_id: usize, sex: Sex, hair_id: usize) -> Vec<String> {
+fn get_entity_part_files(
+    script_loader: &ScriptLoader,
+    entity_type: EntityType,
+    job_id: usize,
+    sex: Sex,
+    head: usize,
+    weapon: usize,
+    head_bottom: usize,
+    head_top: usize,
+    head_middle: usize,
+    _hair_color: usize,
+    _clothes_color: usize,
+    robe: usize,
+) -> Vec<String> {
     let sex_sprite_path = match sex == Sex::Female {
         true => "¿©",
         false => "³²",
     };
+
+    let job_name = script_loader.get_job_name_from_id(job_id);
 
     fn player_body_path(sex_sprite_path: &str, job_id: usize) -> String {
         format!(
@@ -252,29 +275,71 @@ fn get_entity_part_files(script_loader: &ScriptLoader, entity_type: EntityType, 
         )
     }
 
-    fn player_head_path(sex_sprite_path: &str, hair_id: usize) -> String {
-        format!("ÀÎ°£Á·\\¸Ó¸®Åë\\{}\\{}_{}", sex_sprite_path, hair_id, sex_sprite_path)
+    fn player_hair_path(sex_sprite_path: &str, head: usize) -> String {
+        format!("ÀÎ°£Á·\\¸Ó¸®Åë\\{}\\{}_{}", sex_sprite_path, head, sex_sprite_path)
     }
 
-    let male_hair_ids = vec![2, 2, 1, 7, 5, 4, 3, 6, 8, 9, 10, 12, 11];
-    let female_hair_ids = vec![2, 2, 4, 7, 1, 5, 3, 6, 12, 10, 9, 11, 8];
+    fn player_accessory_path(sex_sprite_path: &str, accessory_name: String) -> String {
+        format!("¾Ç¼¼»ç¸®\\{}\\{}{}", sex_sprite_path, sex_sprite_path, accessory_name)
+    }
 
-    let hair_style_id = match (sex, hair_id) {
-        (Sex::Male, 0..12) => male_hair_ids[hair_id],
-        (Sex::Male, hair_id) => hair_id,
-        (Sex::Female, 0..12) => female_hair_ids[hair_id],
-        (Sex::Female, hair_id) => hair_id,
+    fn player_robe_path(sex_sprite_path: &str, robe_name: String, job_name: String) -> String {
+        format!("·Îºê\\{}\\{}_{}", robe_name, sex_sprite_path, job_name)
+    }
+
+    let male_heads = vec![2, 2, 1, 7, 5, 4, 3, 6, 8, 9, 10, 12, 11];
+    let female_heads = vec![2, 2, 4, 7, 1, 5, 3, 6, 12, 10, 9, 11, 8];
+
+    let hair_style_id = match (sex, head) {
+        (Sex::Male, 0..12) => male_heads[head],
+        (Sex::Male, head) => head,
+        (Sex::Female, 0..12) => female_heads[head],
+        (Sex::Female, head) => head,
         _ => 1,
     };
 
+    let mut player_sprites = vec![
+        player_body_path(sex_sprite_path, job_id),
+        player_hair_path(sex_sprite_path, hair_style_id),
+    ];
+
+    #[cfg(feature = "debug")]
+    {
+        print_debug!("job id: {:?}", job_id);
+        print_debug!("job name: {:?}", job_name);
+        print_debug!("head bottom view id: {:?}", head_bottom);
+        print_debug!("head top view id: {:?}", head_top);
+        print_debug!("head middle view id: {:?}", head_middle);
+        print_debug!("robe view id: {:?}", robe);
+        print_debug!("weapon view id: {:?}", weapon);
+    }
+
+    if head_bottom > 0 {
+        let accessory_name = script_loader.get_accessory_name_from_view_id(head_bottom);
+        let path = player_accessory_path(sex_sprite_path, accessory_name);
+
+        player_sprites.push(path);
+    }
+
+    if head_top > 0 {
+        let accessory_name = script_loader.get_accessory_name_from_view_id(head_top);
+        let path = player_accessory_path(sex_sprite_path, accessory_name);
+
+        player_sprites.push(path);
+    }
+
+    if head_middle > 0 {
+        let accessory_name = script_loader.get_accessory_name_from_view_id(head_middle);
+        let path = player_accessory_path(sex_sprite_path, accessory_name);
+
+        player_sprites.push(path);
+    }
+
     match entity_type {
-        EntityType::Player => vec![
-            player_body_path(sex_sprite_path, job_id),
-            player_head_path(sex_sprite_path, hair_style_id),
-        ],
-        EntityType::Npc => vec![format!("npc\\{}", script_loader.get_job_name_from_id(job_id))],
-        EntityType::Monster => vec![format!("¸ó½ºÅÍ\\{}", script_loader.get_job_name_from_id(job_id))],
-        EntityType::Warp | EntityType::Hidden => vec![format!("npc\\{}", script_loader.get_job_name_from_id(job_id))], // TODO: change
+        EntityType::Player => player_sprites,
+        EntityType::Npc => vec![format!("npc\\{}", job_name)],
+        EntityType::Monster => vec![format!("¸ó½ºÅÍ\\{}", job_name)],
+        EntityType::Warp | EntityType::Hidden => vec![format!("npc\\{}", job_name)], // TODO: change
     }
 }
 
@@ -290,7 +355,14 @@ impl Common {
     ) -> Self {
         let entity_id = entity_data.entity_id;
         let job_id = entity_data.job as usize;
-        let hair_id = entity_data.head as usize;
+        let head = entity_data.head as usize;
+        let weapon = entity_data.weapon as usize;
+        let head_bottom = entity_data.head_bottom as usize;
+        let head_top = entity_data.head_top as usize;
+        let head_middle = entity_data.head_middle as usize;
+        let hair_color = entity_data.hair_color as usize;
+        let clothes_color = entity_data.clothes_color as usize;
+        let robe = entity_data.robe as usize;
         let grid_position = entity_data.position;
         let grid_position = Vector2::new(grid_position.x, grid_position.y);
         let position = map.get_world_position(grid_position);
@@ -313,7 +385,20 @@ impl Common {
             _ => EntityType::Npc,
         };
 
-        let entity_part_files = get_entity_part_files(script_loader, entity_type, job_id, sex, hair_id);
+        let entity_part_files = get_entity_part_files(
+            script_loader,
+            entity_type,
+            job_id,
+            sex,
+            head,
+            weapon,
+            head_bottom,
+            head_top,
+            head_middle,
+            hair_color,
+            clothes_color,
+            robe,
+        );
         let animation_data = animation_loader
             .get(sprite_loader, action_loader, entity_type, &entity_part_files)
             .unwrap();
@@ -325,7 +410,14 @@ impl Common {
             position,
             entity_id,
             job_id,
-            hair_id,
+            head,
+            weapon,
+            head_bottom,
+            head_top,
+            head_middle,
+            hair_color,
+            clothes_color,
+            robe,
             head_direction,
             sex,
             active_movement,
@@ -354,7 +446,20 @@ impl Common {
         script_loader: &ScriptLoader,
         animation_loader: &mut AnimationLoader,
     ) {
-        let entity_part_files = get_entity_part_files(script_loader, self.entity_type, self.job_id, self.sex, self.hair_id);
+        let entity_part_files = get_entity_part_files(
+            script_loader,
+            self.entity_type,
+            self.job_id,
+            self.sex,
+            self.head,
+            self.weapon,
+            self.head_bottom,
+            self.head_top,
+            self.head_middle,
+            self.hair_color,
+            self.clothes_color,
+            self.robe,
+        );
         self.animation_data = animation_loader
             .get(sprite_loader, action_loader, self.entity_type, &entity_part_files)
             .unwrap();
@@ -1025,8 +1130,36 @@ impl Entity {
         self.get_common_mut().job_id = job_id;
     }
 
-    pub fn set_hair(&mut self, hair_id: usize) {
-        self.get_common_mut().hair_id = hair_id;
+    pub fn set_hair(&mut self, head: usize) {
+        self.get_common_mut().head = head;
+    }
+
+    pub fn set_weapon(&mut self, view_id: usize) {
+        self.get_common_mut().weapon = view_id;
+    }
+
+    pub fn set_head_bottom(&mut self, view_id: usize) {
+        self.get_common_mut().head_bottom = view_id;
+    }
+
+    pub fn set_head_top(&mut self, view_id: usize) {
+        self.get_common_mut().head_top = view_id;
+    }
+
+    pub fn set_head_middle(&mut self, view_id: usize) {
+        self.get_common_mut().head_middle = view_id;
+    }
+
+    pub fn set_hair_color(&mut self, palette_id: usize) {
+        self.get_common_mut().hair_color = palette_id;
+    }
+
+    pub fn set_clothes_color(&mut self, palette_id: usize) {
+        self.get_common_mut().clothes_color = palette_id;
+    }
+
+    pub fn set_robe(&mut self, view_id: usize) {
+        self.get_common_mut().robe = view_id;
     }
 
     pub fn reload_sprite(

@@ -38,6 +38,34 @@ impl ScriptLoader {
             .unwrap();
         state.load(&data).exec()?;
 
+        let data = game_file_loader
+            .get("data\\luafiles514\\lua files\\datainfo\\accessoryid.lub")
+            .unwrap();
+        state.load(&data).exec()?;
+
+        let data = game_file_loader.get("data\\luafiles514\\lua files\\datainfo\\accname.lub").unwrap();
+        state.load(&data).exec()?;
+
+        let data = game_file_loader
+            .get("data\\luafiles514\\lua files\\datainfo\\accname_f.lub")
+            .unwrap();
+        state.load(&data).exec()?;
+
+        let data = game_file_loader
+            .get("data\\luafiles514\\lua files\\datainfo\\spriterobeid.lub")
+            .unwrap();
+        state.load(&data).exec()?;
+
+        let data = game_file_loader
+            .get("data\\luafiles514\\lua files\\datainfo\\spriterobename.lub")
+            .unwrap();
+        state.load(&data).exec()?;
+
+        let data = game_file_loader
+            .get("data\\luafiles514\\lua files\\datainfo\\spriterobename_f.lub")
+            .unwrap();
+        state.load(&data).exec()?;
+
         let job_id_function = r#"
 function get_job_name_from_id(id)
   for k,v in pairs(JTtbl) do
@@ -104,6 +132,28 @@ end
             .to_str()
             .unwrap()
             .replace("CHONCHON", "chocho") // TODO: find a way to do this properly
+    }
+
+    // TODO: move this to a different class that utilizes the script loader
+    pub fn get_accessory_name_from_view_id(&self, view_id: usize) -> String {
+        use mlua::prelude::*;
+        use mlua::Function;
+
+        let globals = self.state.globals();
+        let print: Function = globals.get("ReqAccName").unwrap();
+
+        print.call::<LuaString>(view_id).unwrap().to_str().unwrap().to_owned()
+    }
+
+    // TODO: move this to a different class that utilizes the script loader
+    pub fn get_robe_name_from_view_id(&self, view_id: usize) -> String {
+        use mlua::prelude::*;
+        use mlua::Function;
+
+        let globals = self.state.globals();
+        let print: Function = globals.get("ReqRobSprName").unwrap();
+
+        print.call::<LuaString>(view_id).unwrap().to_str().unwrap().to_owned()
     }
 
     // TODO: move this to a different class that utilizes the script loader
