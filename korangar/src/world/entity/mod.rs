@@ -245,44 +245,52 @@ fn get_entity_part_files(
     job_id: usize,
     sex: Sex,
     head: Option<usize>,
-) -> Vec<String> {
-    let sex_sprite_path = match sex == Sex::Female {
-        true => "¿©",
-        false => "³²",
-    };
-
-    fn player_body_path(sex_sprite_path: &str, job_id: usize) -> String {
-        format!(
-            "ÀÎ°£Á·\\¸öÅë\\{}\\{}_{}",
-            sex_sprite_path,
-            get_sprite_path_for_player_job(job_id),
-            sex_sprite_path
-        )
-    }
-
-    fn player_head_path(sex_sprite_path: &str, head_id: usize) -> String {
-        format!("ÀÎ°£Á·\\¸Ó¸®Åë\\{}\\{}_{}", sex_sprite_path, head_id, sex_sprite_path)
-    }
-
-    let mut player_sprites = vec![player_body_path(sex_sprite_path, job_id)];
-
-    let head_id = match (sex, head) {
-        (Sex::Male, Some(head)) if (0..MALE_HAIR_LOOKUP.len()).contains(&head) => Some(MALE_HAIR_LOOKUP[head]),
-        (Sex::Male, Some(head)) => Some(head),
-        (Sex::Female, Some(head)) if (0..FEMALE_HAIR_LOOKUP.len()).contains(&head) => Some(FEMALE_HAIR_LOOKUP[head]),
-        (Sex::Female, Some(head)) => Some(head),
-        _ => Some(1),
-    };
-
-    if let Some(head_id) = head_id {
-        player_sprites.push(player_head_path(sex_sprite_path, head_id));
-    }
+) -> Vec<(String, String)> {
+    let job_name = script_loader.get_job_name_from_id(job_id);
 
     match entity_type {
-        EntityType::Player => player_sprites,
-        EntityType::Npc => vec![format!("npc\\{}", script_loader.get_job_name_from_id(job_id))],
-        EntityType::Monster => vec![format!("¸ó½ºÅÍ\\{}", script_loader.get_job_name_from_id(job_id))],
-        EntityType::Warp | EntityType::Hidden => vec![format!("npc\\{}", script_loader.get_job_name_from_id(job_id))], // TODO: change
+        EntityType::Player => {
+            let sex_sprite_path = match sex == Sex::Female {
+                true => "¿©",
+                false => "³²",
+            };
+
+            fn player_body_path(sex_sprite_path: &str, job_id: usize) -> String {
+                format!(
+                    "ÀÎ°£Á·\\¸öÅë\\{}\\{}_{}",
+                    sex_sprite_path,
+                    get_sprite_path_for_player_job(job_id),
+                    sex_sprite_path
+                )
+            }
+
+            fn player_head_path(sex_sprite_path: &str, head_id: usize) -> String {
+                format!("ÀÎ°£Á·\\¸Ó¸®Åë\\{}\\{}_{}", sex_sprite_path, head_id, sex_sprite_path)
+            }
+
+            let head_id = match (sex, head) {
+                (Sex::Male, Some(head)) if (0..MALE_HAIR_LOOKUP.len()).contains(&head) => MALE_HAIR_LOOKUP[head],
+                (Sex::Male, Some(head)) => head,
+                (Sex::Female, Some(head)) if (0..FEMALE_HAIR_LOOKUP.len()).contains(&head) => FEMALE_HAIR_LOOKUP[head],
+                (Sex::Female, Some(head)) => head,
+                _ => 1,
+            };
+
+            let body_sprite = (
+                player_body_path(sex_sprite_path, job_id),
+                player_body_path(sex_sprite_path, job_id),
+            );
+
+            let head_sprite = (
+                player_head_path(sex_sprite_path, head_id),
+                player_head_path(sex_sprite_path, head_id),
+            );
+
+            vec![body_sprite, head_sprite]
+        }
+        EntityType::Npc => vec![(format!("npc\\{}", job_name), format!("npc\\{}", job_name))],
+        EntityType::Monster => vec![(format!("¸ó½ºÅÍ\\{}", job_name), format!("¸ó½ºÅÍ\\{}", job_name))],
+        EntityType::Warp | EntityType::Hidden => vec![(format!("npc\\{}", job_name), format!("npc\\{}", job_name))],
     }
 }
 
@@ -1177,4 +1185,8 @@ impl PrototypeWindow<InterfaceSettings> for Entity {
             Entity::Npc(npc) => npc.to_window(window_cache, application, available_space),
         }
     }
+}
+
+pub struct EntityAnimation {
+    pub files: Vec<String>,
 }

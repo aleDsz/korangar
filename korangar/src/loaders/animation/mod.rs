@@ -24,13 +24,13 @@ impl AnimationLoader {
         sprite_loader: &mut SpriteLoader,
         action_loader: &mut ActionLoader,
         entity_type: EntityType,
-        entity_part_files: &[String],
+        entity_part_files: &[(String, String)],
     ) -> Result<Arc<AnimationData>, LoadError> {
         let animation_pairs: Vec<AnimationPair> = entity_part_files
             .iter()
-            .map(|file_path| AnimationPair {
-                sprites: sprite_loader.get(&format!("{file_path}.spr")).unwrap(),
-                actions: action_loader.get(&format!("{file_path}.act")).unwrap(),
+            .map(|(sprite_file_path, action_file_path)| AnimationPair {
+                sprites: sprite_loader.get(&format!("{sprite_file_path}.spr")).unwrap(),
+                actions: action_loader.get(&format!("{action_file_path}.act")).unwrap(),
             })
             .collect();
 
@@ -274,7 +274,8 @@ impl AnimationLoader {
             entity_type,
         });
 
-        self.cache.insert(entity_part_files.to_vec(), animation_data.clone());
+        let entity_files: Vec<String> = Self::flatten_entity_files(entity_part_files);
+        self.cache.insert(entity_files.to_vec(), animation_data.clone());
 
         Ok(animation_data)
     }
@@ -284,12 +285,22 @@ impl AnimationLoader {
         sprite_loader: &mut SpriteLoader,
         action_loader: &mut ActionLoader,
         entity_type: EntityType,
-        entity_part_files: &[String],
+        entity_part_files: &[(String, String)],
     ) -> Result<Arc<AnimationData>, LoadError> {
-        match self.cache.get(entity_part_files) {
+        let entity_files: Vec<String> = Self::flatten_entity_files(entity_part_files);
+        match self.cache.get(&entity_files) {
             Some(animation_data) => Ok(animation_data.clone()),
             None => self.load(sprite_loader, action_loader, entity_type, entity_part_files),
         }
+    }
+
+    fn flatten_entity_files(entity_part_files: &[(String, String)]) -> Vec<String> {
+        entity_part_files
+            .iter()
+            .fold(Vec::with_capacity(entity_part_files.len() * 2), |mut acc, p| {
+                acc.extend([p.0.clone(), p.1.clone()]);
+                acc
+            })
     }
 }
 
