@@ -28,6 +28,9 @@ use crate::world::{AnimationData, Map};
 #[cfg(feature = "debug")]
 use crate::{Buffer, ModelVertex};
 
+const MALE_HAIR_LOOKUP: &[usize] = &[2, 2, 1, 7, 5, 4, 3, 6, 8, 9, 10, 12, 11];
+const FEMALE_HAIR_LOOKUP: &[usize] = &[2, 2, 4, 7, 1, 5, 3, 6, 12, 10, 9, 11, 8];
+
 pub enum ResourceState<T> {
     Available(T),
     Unavailable,
@@ -67,7 +70,6 @@ pub enum EntityType {
 pub struct Common {
     pub entity_id: EntityId,
     pub job_id: usize,
-    pub hair_id: usize,
     pub health_points: usize,
     pub maximum_health_points: usize,
     pub movement_speed: usize,
@@ -237,7 +239,13 @@ fn get_sprite_path_for_player_job(job_id: usize) -> &'static str {
     }
 }
 
-fn get_entity_part_files(script_loader: &ScriptLoader, entity_type: EntityType, job_id: usize, sex: Sex, hair_id: usize) -> Vec<String> {
+fn get_entity_part_files(
+    script_loader: &ScriptLoader,
+    entity_type: EntityType,
+    job_id: usize,
+    sex: Sex,
+    head: Option<usize>,
+) -> Vec<String> {
     let sex_sprite_path = match sex == Sex::Female {
         true => "¿©",
         false => "³²",
@@ -252,26 +260,26 @@ fn get_entity_part_files(script_loader: &ScriptLoader, entity_type: EntityType, 
         )
     }
 
-    fn player_head_path(sex_sprite_path: &str, hair_id: usize) -> String {
-        format!("ÀÎ°£Á·\\¸Ó¸®Åë\\{}\\{}_{}", sex_sprite_path, hair_id, sex_sprite_path)
+    fn player_head_path(sex_sprite_path: &str, head_id: usize) -> String {
+        format!("ÀÎ°£Á·\\¸Ó¸®Åë\\{}\\{}_{}", sex_sprite_path, head_id, sex_sprite_path)
     }
 
-    let male_hair_ids = vec![2, 2, 1, 7, 5, 4, 3, 6, 8, 9, 10, 12, 11];
-    let female_hair_ids = vec![2, 2, 4, 7, 1, 5, 3, 6, 12, 10, 9, 11, 8];
+    let mut player_sprites = vec![player_body_path(sex_sprite_path, job_id)];
 
-    let hair_style_id = match (sex, hair_id) {
-        (Sex::Male, 0..12) => male_hair_ids[hair_id],
-        (Sex::Male, hair_id) => hair_id,
-        (Sex::Female, 0..12) => female_hair_ids[hair_id],
-        (Sex::Female, hair_id) => hair_id,
-        _ => 1,
+    let head_id = match (sex, head) {
+        (Sex::Male, Some(head)) if (0..MALE_HAIR_LOOKUP.len()).contains(&head) => Some(MALE_HAIR_LOOKUP[head]),
+        (Sex::Male, Some(head)) => Some(head),
+        (Sex::Female, Some(head)) if (0..FEMALE_HAIR_LOOKUP.len()).contains(&head) => Some(FEMALE_HAIR_LOOKUP[head]),
+        (Sex::Female, Some(head)) => Some(head),
+        _ => Some(1),
     };
 
+    if let Some(head_id) = head_id {
+        player_sprites.push(player_head_path(sex_sprite_path, head_id));
+    }
+
     match entity_type {
-        EntityType::Player => vec![
-            player_body_path(sex_sprite_path, job_id),
-            player_head_path(sex_sprite_path, hair_style_id),
-        ],
+        EntityType::Player => player_sprites,
         EntityType::Npc => vec![format!("npc\\{}", script_loader.get_job_name_from_id(job_id))],
         EntityType::Monster => vec![format!("¸ó½ºÅÍ\\{}", script_loader.get_job_name_from_id(job_id))],
         EntityType::Warp | EntityType::Hidden => vec![format!("npc\\{}", script_loader.get_job_name_from_id(job_id))], // TODO: change
@@ -290,7 +298,7 @@ impl Common {
     ) -> Self {
         let entity_id = entity_data.entity_id;
         let job_id = entity_data.job as usize;
-        let hair_id = entity_data.head as usize;
+        let head = entity_data.head as usize;
         let grid_position = entity_data.position;
         let grid_position = Vector2::new(grid_position.x, grid_position.y);
         let position = map.get_world_position(grid_position);
@@ -313,7 +321,7 @@ impl Common {
             _ => EntityType::Npc,
         };
 
-        let entity_part_files = get_entity_part_files(script_loader, entity_type, job_id, sex, hair_id);
+        let entity_part_files = get_entity_part_files(script_loader, entity_type, job_id, sex, Some(head));
         let animation_data = animation_loader
             .get(sprite_loader, action_loader, entity_type, &entity_part_files)
             .unwrap();
@@ -325,7 +333,6 @@ impl Common {
             position,
             entity_id,
             job_id,
-            hair_id,
             head_direction,
             sex,
             active_movement,
@@ -354,7 +361,7 @@ impl Common {
         script_loader: &ScriptLoader,
         animation_loader: &mut AnimationLoader,
     ) {
-        let entity_part_files = get_entity_part_files(script_loader, self.entity_type, self.job_id, self.sex, self.hair_id);
+        let entity_part_files = get_entity_part_files(script_loader, self.entity_type, self.job_id, self.sex, None);
         self.animation_data = animation_loader
             .get(sprite_loader, action_loader, self.entity_type, &entity_part_files)
             .unwrap();
@@ -784,6 +791,8 @@ impl Common {
 #[derive(PrototypeWindow)]
 pub struct Player {
     common: Common,
+
+    pub hair_id: usize,
     pub spell_points: usize,
     pub activity_points: usize,
     pub maximum_spell_points: usize,
@@ -802,6 +811,7 @@ impl Player {
         player_position: WorldPosition,
         client_tick: ClientTick,
     ) -> Self {
+        let hair_id = character_information.head as usize;
         let spell_points = character_information.spell_points as usize;
         let activity_points = 0;
         let maximum_spell_points = character_information.maximum_spell_points as usize;
@@ -818,6 +828,7 @@ impl Player {
 
         Self {
             common,
+            hair_id,
             spell_points,
             activity_points,
             maximum_spell_points,
@@ -908,6 +919,30 @@ impl Player {
             self.maximum_activity_points as f32,
             self.activity_points as f32,
         );
+    }
+
+    pub fn reload_sprite(
+        &mut self,
+        sprite_loader: &mut SpriteLoader,
+        action_loader: &mut ActionLoader,
+        script_loader: &ScriptLoader,
+        animation_loader: &mut AnimationLoader,
+    ) {
+        let entity_part_files = get_entity_part_files(
+            script_loader,
+            self.get_common_mut().entity_type,
+            self.get_common_mut().job_id,
+            self.get_common_mut().sex,
+            Some(self.hair_id),
+        );
+        self.get_common_mut().animation_data = animation_loader
+            .get(
+                sprite_loader,
+                action_loader,
+                self.get_common_mut().entity_type,
+                &entity_part_files,
+            )
+            .unwrap();
     }
 }
 
@@ -1026,7 +1061,10 @@ impl Entity {
     }
 
     pub fn set_hair(&mut self, hair_id: usize) {
-        self.get_common_mut().hair_id = hair_id;
+        match self {
+            Self::Player(player) => player.hair_id = hair_id,
+            _ => (),
+        }
     }
 
     pub fn reload_sprite(
@@ -1036,8 +1074,12 @@ impl Entity {
         animation_loader: &mut AnimationLoader,
         script_loader: &ScriptLoader,
     ) {
-        self.get_common_mut()
-            .reload_sprite(sprite_loader, action_loader, script_loader, animation_loader);
+        match self {
+            Self::Player(player) => player.reload_sprite(sprite_loader, action_loader, script_loader, animation_loader),
+            Self::Npc(npc) => npc
+                .get_common_mut()
+                .reload_sprite(sprite_loader, action_loader, script_loader, animation_loader),
+        }
     }
 
     pub fn set_details_requested(&mut self) {
